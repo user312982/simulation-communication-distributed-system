@@ -54,6 +54,24 @@ Dua skenario dunia nyata digunakan sebagai konteks:
 
 ---
 
+## Tampilan Aplikasi
+
+### Mode Request-Response — Simulasi Aplikasi Pesan Makanan (GoFood)
+
+![Request-Response Mode](Tugas2/docs/screenshot-request-response.png)
+
+Pada mode ini, dua node **Pelanggan** (Pelanggan A & B) mengirim order ke **Restoran Padang** (server). Setiap order membawa payload berisi nama menu, dan server merespons dengan konfirmasi + estimasi waktu. Partikel **biru** merepresentasikan request yang dikirim, partikel **hijau** merepresentasikan response yang dikembalikan. Komunikasi bersifat sinkron — pelanggan menunggu konfirmasi sebelum order berikutnya dikirim.
+
+---
+
+### Mode Publish-Subscribe — Simulasi Siaran Peringatan Bencana (BMKG)
+
+![Publish-Subscribe Mode](Tugas2/docs/screenshot-publish-subscribe.png)
+
+Pada mode ini, **BMKG Pusat** dan **Sensor Lapangan** bertindak sebagai publisher yang menerbitkan data ke MQTT Broker (Mosquitto). Broker meneruskan siaran secara serentak ke tiga subscriber: **MetroTV**, **RRI Radio**, dan **Aplikasi Warga**. Partikel **kuning** menunjukkan data yang dikirim ke broker, partikel **ungu** menunjukkan siaran ke masing-masing subscriber. Komunikasi bersifat asinkron — publisher tidak perlu menunggu konfirmasi penerima.
+
+---
+
 ## Getting Started
 
 ### Prasyarat
