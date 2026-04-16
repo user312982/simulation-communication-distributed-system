@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulasi Sistem Terdistribusi — Tugas 2</title>
+    <meta name="description" content="Simulasi interaktif model komunikasi Request-Response dan Publish-Subscribe dalam sistem terdistribusi menggunakan MQTT.">
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="layout">
+        <!-- Top Navigation -->
+        <nav class="navbar">
+            <div class="nav-brand">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                    <polyline points="2 17 12 22 22 17"></polyline>
+                    <polyline points="2 12 12 17 22 12"></polyline>
+                </svg>
+                <div class="breadcrumbs">
+                    <span class="dim">Sistem Terdistribusi</span>
+                    <span class="separator">/</span>
+                    <span class="current">Tugas 2 — Simulasi Komunikasi</span>
+                </div>
+            </div>
+            
+            <div class="nav-controls">
+                <div class="status-badge" id="brokerStatusContainer">
+                    <span class="status-indicator" id="brokerDot"></span>
+                    <span id="brokerLabel">Menginisialisasi...</span>
+                </div>
+                <button id="btnReconnect" class="btn btn-secondary btn-sm">↻ Reconnect</button>
+            </div>
+        </nav>
+
+        <div class="main-content">
+            <!-- Left Column: Canvas & Logs -->
+            <div class="col-left">
+
+                <!-- Scenario Info Banner -->
+                <div class="scenario-banner" id="scenarioBanner">
+                    <div class="scenario-text">
+                        <div class="scenario-title" id="scenarioTitle">Skenario: Aplikasi Pesan Makanan (GoFood)</div>
+                        <div class="scenario-desc" id="scenarioDesc">
+                            <strong>Pelanggan-A</strong> & <strong>Pelanggan-B</strong> mengirim order ke <strong>Restoran Padang</strong>. Restoran memproses lalu membalas konfirmasi — sama persis seperti kamu pesan GoFood!
+                        </div>
+                    </div>
+                    <div class="scenario-flow" id="scenarioFlow">
+                        <span class="flow-step">Pelanggan kirim order</span>
+                        <span class="flow-arrow">→</span>
+                        <span class="flow-step">Restoran proses</span>
+                        <span class="flow-arrow">→</span>
+                        <span class="flow-step">Konfirmasi kembali</span>
+                    </div>
+                </div>
+
+                <!-- Network Topology Canvas -->
+                <div class="card canvas-card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <h3>Visualisasi Jaringan</h3>
+                            <div class="badge" id="activeModelLabel">Request-Response</div>
+                        </div>
+                    </div>
+                    <div class="canvas-container">
+                        <canvas id="topologyCanvas" width="800" height="460"></canvas>
+                    </div>
+                </div>
+
+                <!-- Event Log -->
+                <div class="card log-card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <h3>Log Pesan Real-time</h3>
+                            <span class="badge" id="logCount">0 pesan</span>
+                        </div>
+                    </div>
+                    <div class="log-stream" id="logContainer">
+                        <div class="log-empty">Belum ada aktivitas. Tekan tombol "Kirim Pesan" untuk memulai.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Controls & Metrics -->
+            <div class="col-right">
+
+                <!-- Simulation Controls -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Panel Kontrol Simulasi</h3>
+                    </div>
+                    <div class="card-body">
+
+                        <div class="form-group">
+                            <label>Model Komunikasi</label>
+                            <div class="segmented-control">
+                                <label class="segment">
+                                    <input type="radio" name="modelType" value="rr" checked>
+                                    <span>Request-Response</span>
+                                </label>
+                                <label class="segment">
+                                    <input type="radio" name="modelType" value="ps">
+                                    <span>Publish-Subscribe</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Hanya muncul di mode PS -->
+                        <div class="form-group" id="topicGroup" style="display: none;">
+                            <label>Topik Siaran BMKG</label>
+                            <select id="topicSelect" class="native-select">
+                                <option value="gempa/peringatan">gempa/peringatan</option>
+                                <option value="cuaca/ekstrem">cuaca/ekstrem</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <div class="range-header">
+                                <label>Simulasi Delay Jaringan</label>
+                                <span class="range-val"><span id="delayVal">300</span>ms</span>
+                            </div>
+                            <input type="range" id="delaySlider" min="50" max="2000" step="50" value="300" class="native-range">
+                            <div class="range-hint">Semakin besar = koneksi internet lebih lambat</div>
+                        </div>
+
+                        <div class="form-group">
+                            <div class="range-header">
+                                <label>Jumlah Pesan (Stress Test)</label>
+                                <span class="range-val"><span id="countVal">5</span> pesan</span>
+                            </div>
+                            <input type="range" id="countSlider" min="1" max="50" step="1" value="5" class="native-range">
+                        </div>
+
+                        <div class="action-grid">
+                            <button id="btnSingle" class="btn btn-primary">Kirim 1 Pesan</button>
+                            <button id="btnStress" class="btn btn-secondary">Stress Test (banyak pesan)</button>
+                            <button id="btnReset" class="btn btn-danger">Reset Semua Data</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Metrics -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Statistik Live</h3>
+                    </div>
+                    <div class="metrics-container">
+                        <!-- RR Metrics -->
+                        <div class="metric-group">
+                            <div class="metric-group-title rr-title">Request-Response (GoFood)</div>
+                            <div class="metric-grid">
+                                <div class="metric-box">
+                                    <span class="m-label">Transaksi Order</span>
+                                    <span class="m-value" id="rrCount">0</span>
+                                </div>
+                                <div class="metric-box">
+                                    <span class="m-label">Total Pesan</span>
+                                    <span class="m-value" id="rrMsgs">0</span>
+                                </div>
+                                <div class="metric-box">
+                                    <span class="m-label">Rata-rata Delay</span>
+                                    <span class="m-value"><span id="rrLat">0.0</span><span class="unit">ms</span></span>
+                                </div>
+                                <div class="metric-box">
+                                    <span class="m-label">Throughput</span>
+                                    <span class="m-value"><span id="rrTput">0.0</span><span class="unit">msg/s</span></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <!-- PS Metrics -->
+                        <div class="metric-group">
+                            <div class="metric-group-title ps-title">Publish-Subscribe (BMKG)</div>
+                            <div class="metric-grid">
+                                <div class="metric-box">
+                                    <span class="m-label">Siaran Terkirim</span>
+                                    <span class="m-value" id="psCount">0</span>
+                                </div>
+                                <div class="metric-box">
+                                    <span class="m-label">Total Penerima</span>
+                                    <span class="m-value" id="psMsgs">0</span>
+                                </div>
+                                <div class="metric-box">
+                                    <span class="m-label">Rata-rata Delay</span>
+                                    <span class="m-value"><span id="psLat">0.0</span><span class="unit">ms</span></span>
+                                </div>
+                                <div class="metric-box">
+                                    <span class="m-label">Throughput</span>
+                                    <span class="m-value"><span id="psTput">0.0</span><span class="unit">msg/s</span></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Comparison Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Perbandingan Model</h3>
+                    </div>
+                    <div class="card-body comparison-body">
+                        <div class="compare-row">
+                            <div class="compare-col rr-col">
+                                <div class="compare-title">Request-Response</div>
+                                <ul class="compare-list">
+                                    <li>Satu pengirim, satu penerima</li>
+                                    <li>Wajib tunggu balasan</li>
+                                    <li>Cocok: order, login, bayar</li>
+                                    <li>Contoh: GoFood, Tokopedia</li>
+                                </ul>
+                            </div>
+                            <div class="compare-col ps-col">
+                                <div class="compare-title">Publish-Subscribe</div>
+                                <ul class="compare-list">
+                                    <li>Satu pengirim, banyak penerima</li>
+                                    <li>Tidak perlu tunggu balasan</li>
+                                    <li>Cocok: notifikasi, siaran</li>
+                                    <li>Contoh: BMKG, push notif</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    
+    <script src="/static/script.js"></script>
+</body>
+</html>

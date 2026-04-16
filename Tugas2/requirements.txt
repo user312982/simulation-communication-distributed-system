@@ -1,0 +1,7 @@
+# Dependensi Simulasi Model Komunikasi - Tugas 2
+# Install dengan: pip install -r requirements.txt
+
+paho-mqtt>=1.6.1
+fastapi
+uvicorn
+websockets
